@@ -690,8 +690,8 @@ def _armar_instrucciones(nombre, instrucciones, tono, audiencia, limitaciones):
 
 def crear_agente(instrucciones: str = None, *, nombre: str = "Mi agente", tono: str = None,
                  audiencia: str = None, limitaciones: list = None, herramientas: list = None,
-                 habilidades: list = None, memoria: bool = False, guardrails_entrada=None,
-                 guardrails_salida=None, derivar_a: list = None,
+                 habilidades: list = None, memoria: bool = False, guardrails_entrada: callable = None,
+                 guardrails_salida: callable = None, derivar_a: list = None,
                  descripcion_para_agentes: str = None, temperatura: float = None,
                  carpeta_habilidades: str = "SKILLS", modelo: str = None, **otros_nombres):
     """Crea un agente nuevo. Solo las instrucciones son obligatorias.
