@@ -192,6 +192,8 @@ interfaz(
 )
 ```
 
+<img src="chat_conversacion.png" alt="Interfaz con una conversación del Tutor Socrático" width="480">
+
 - Todo es opcional menos el agente. Sin `titulo`, usa el nombre del agente.
 - `compartir=True` (viene así) crea un link para abrirlo desde otro computador o el celular, para la prueba cruzada.
 - **Cada persona que abre el link tiene su propia conversación.**

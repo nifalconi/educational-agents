@@ -271,6 +271,15 @@ def test_interfaz_con_sinonimos(gradio_falso):
     assert type(gradio_falso["launch"]["theme"]).__name__ == "Ocean"
 
 
+def test_mensaje_inicial_no_esconde_los_ejemplos(gradio_falso):
+    """Si el saludo fuera un mensaje del agente, Gradio escondería los ejemplos."""
+    interfaz(crear_agente("x"), ejemplos=["hola"], mensaje_inicial="¡Hola!")
+    assert gradio_falso["chatbot"].value == []
+    assert "¡Hola!" in gradio_falso["chatbot"].placeholder
+    assert gradio_falso["examples"] == ["hola"]
+    assert gradio_falso["textbox"].placeholder == "Escribe tu mensaje…"
+
+
 @pytest.mark.parametrize("llamar, esperado", [
     (lambda a: interfaz(a, tema="Ocean", theme="Glass"), "Escribiste tema= y theme="),
     (lambda a: interfaz(a, tema="rosado"), "No existe el tema 'rosado'"),

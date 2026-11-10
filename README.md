@@ -168,6 +168,38 @@ interfaz(tutor, ejemplos=["¿Cómo sumo fracciones?"])      # una página de cha
 > [!TIP]
 > El notebook [`ejemplos/ejemplo_curso.ipynb`](ejemplos/ejemplo_curso.ipynb) recorre todo, clase por clase. Se abre directo en Colab con el botón <a href="https://colab.research.google.com/github/nifalconi/educational-agents/blob/main/ejemplos/ejemplo_curso.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Abrir en Colab"></a>
 
+### 💬 Así se ve la interfaz
+
+<table>
+<tr>
+<th>Al abrir el link</th>
+<th>Conversando</th>
+</tr>
+<tr>
+<td><img src="docs/chat_vacio.png" alt="Chat recién abierto: título, mensaje de bienvenida y tres preguntas de ejemplo como botones" width="420"></td>
+<td><img src="docs/chat_conversacion.png" alt="Conversación: el tutor guía con preguntas para sumar 3/4 + 1/2 sin dar la respuesta" width="420"></td>
+</tr>
+</table>
+
+Respuestas reales del modelo por defecto (Claude Haiku). El código que lo arma:
+
+```python
+tutor = crear_agente(
+    "Ayudar a estudiantes de secundaria con sus tareas de matemáticas.",
+    nombre="Tutor Socrático",
+    tono="Cercano y paciente. No das la respuesta: guías con preguntas.",
+    limitaciones=["Solo temas escolares.", "No des la respuesta final."],
+    memoria=True,
+)
+interfaz(
+    tutor,
+    titulo="🧮 Tutor Socrático",
+    descripcion="Te ayudo con tus tareas de matemáticas, sin darte la respuesta.",
+    ejemplos=["¿Me ayudas con 3/4 + 1/2?", "¿Qué es una ecuación?", "No entiendo los porcentajes"],
+    mensaje_inicial="¡Hola! ¿En qué tarea estás?",
+)
+```
+
 ### Cómo funciona por dentro
 
 ```mermaid

@@ -586,7 +586,7 @@ def interfaz(agente: "Agente" = None, *, titulo: str = None, descripcion: str = 
     - `titulo`: título del chat. Si no lo pones, usa el nombre del agente.
     - `descripcion`: texto corto bajo el título. Ej: `"Te ayudo con tus tareas."`
     - `ejemplos`: preguntas que aparecen como botones. Ej: `["¿Cómo sumo fracciones?"]`
-    - `mensaje_inicial`: lo primero que dice el agente. Ej: `"¡Hola! ¿En qué te ayudo?"`
+    - `mensaje_inicial`: el saludo que se ve al abrir el chat. Ej: `"¡Hola! ¿En qué te ayudo?"`
     - `tema`: los colores. Ej: `"Soft"`, `"Glass"`, `"Ocean"`, `"Monochrome"`
     - `compartir`: `True` (viene así) crea un link para abrir el chat desde otro
       computador o el celular.
@@ -636,12 +636,17 @@ def interfaz(agente: "Agente" = None, *, titulo: str = None, descripcion: str = 
             return _mensaje_error(e)
         return texto
 
-    chatbot = None
-    if p.get("mensaje_inicial"):
-        chatbot = gr.Chatbot(value=[{"role": "assistant", "content": p["mensaje_inicial"]}])
+    # El mensaje inicial va como placeholder (se ve mientras el chat está vacío):
+    # si fuera un mensaje del agente, Gradio escondería los botones de ejemplos.
+    bienvenida = p.get("mensaje_inicial")
+    chatbot = gr.Chatbot(label=agente.name, scale=1,   # scale=1: llena el alto, como el de Gradio
+                         placeholder=f"### {bienvenida}" if bienvenida else None)
+    textbox = gr.Textbox(placeholder="Escribe tu mensaje…", show_label=False, label="", scale=7,
+                         autofocus=True, submit_btn=True)
     demo = gr.ChatInterface(fn=responder, title=p.get("titulo") or agente.name,
                             description=p.get("descripcion") or agente.handoff_description,
-                            examples=_como_lista(p.get("ejemplos")) or None, chatbot=chatbot)
+                            examples=_como_lista(p.get("ejemplos")) or None,
+                            chatbot=chatbot, textbox=textbox)
     return demo.launch(share=p.get("compartir", True),
                        theme=getattr(gr.themes, temas[tema.lower()])(),
                        **(p.get("opciones_gradio") or {}))
