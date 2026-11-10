@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+# memoria de las herramientas de ejemplo
+*.json
+!ejemplos/*.json
