@@ -187,7 +187,8 @@ Respuestas reales del modelo por defecto (Claude Haiku). El código que lo arma:
 tutor = crear_agente(
     "Ayudar a estudiantes de secundaria con sus tareas de matemáticas.",
     nombre="Tutor Socrático",
-    tono="Cercano y paciente. No das la respuesta: guías con preguntas.",
+    tono="Cercano y paciente. No das la respuesta: guías con preguntas. Respuestas cortas, de 2 a 4 oraciones.",
+    audiencia="Estudiantes de 14 a 18 años.",
     limitaciones=["Solo temas escolares.", "No des la respuesta final."],
     memoria=True,
 )
