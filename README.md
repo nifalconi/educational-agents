@@ -36,7 +36,7 @@ tutor.chat("¿Me ayudas con 3/4 + 1/2?")
 | 🎯 [Para qué existe](#-para-qué-existe) | 🚀 [Instalación](#-instalación) | ✨ [Uso rápido](#-uso-rápido) |
 | 📚 [Guía por clase](#-guía-por-clase) | 🗣️ [Varios nombres](#️-varios-nombres-para-lo-mismo) | 🧠 [Qué lee el modelo](#-qué-lee-el-modelo-y-qué-no) |
 | 🔀 [Cambiar el modelo](#-cambiar-el-modelo) | 🩹 [Cuando algo sale mal](#-cuando-algo-sale-mal) | 💡 [Ayuda en Colab](#-ayuda-dentro-de-colab) |
-| 🧑‍🏫 [Para profes](#-para-profes-y-tutoras) | 🛠️ [Desarrollo](#️-desarrollo) | 💜 [De dónde viene](#-de-dónde-viene) |
+| 🏫 [Para profes](#-para-profes-y-tutoras) | 🛠️ [Desarrollo](#️-desarrollo) | 💜 [De dónde viene](#-de-dónde-viene) |
 
 ## 🎯 Para qué existe
 
@@ -364,7 +364,7 @@ La ayuda sale del código ya cargado: la celda de preparación tiene que haberse
 - ⇥ **`tutor.` + Tab** muestra solo lo útil: `chat`, `obtener_respuesta`, `borrar_memoria`, `ver_instrucciones`, `nombre`.
 - 👀 Si una celda termina en `tutor`, se ve `<Agente 'Tutor'. Escríbele con .chat("hola")>`.
 
-## 🧑‍🏫 Para profes y tutoras
+## 🏫 Para profes y tutoras
 
 En [`docs/para-profes.md`](docs/para-profes.md): cómo armar la celda de preparación, la key, cómo elegir el modelo, cómo actualizar la librería, dónde poner las habilidades y los problemas más comunes.
 
