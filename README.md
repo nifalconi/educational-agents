@@ -130,7 +130,7 @@ En Colab, la primera celda de cada notebook:
 - Con `#@title`, Colab muestra la celda con un título y se puede ocultar el código. Más en [`docs/para-profes.md`](docs/para-profes.md).
 
 > [!WARNING]
-> Quien abra el notebook puede ver la key. Usa una con **límite de gasto** y rótala al terminar el curso. Nunca la subas a este repositorio.
+> Quien abra el notebook puede ver la key. Usa una con **límite de gasto** y rótala al terminar el curso.
 
 En tu computador, para desarrollar:
 

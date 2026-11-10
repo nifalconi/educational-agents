@@ -22,7 +22,6 @@ Es la primera celda de cada notebook. Las alumnas la ejecutan y no la tocan:
 - Por ahora va en la celda de preparación con `%env`. Quien abra el notebook la puede ver, así que conviene que tenga un **límite de gasto** en OpenRouter y rotarla al terminar el curso.
 - La librería la lee de la variable `OPENROUTER_API_KEY`. Cambiar cómo llega (Secretos de Colab, una casilla para escribirla, o dentro de la librería) no obliga a tocar el resto de los notebooks.
 - Si la key no funciona, la alumna ve: *"No pude conectarme con el modelo: la key no funciona. Avísale a tu profe."*
-- **Nunca subas la key a este repositorio** ni la pegues en la documentación.
 
 ## El modelo
 
