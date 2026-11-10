@@ -92,7 +92,7 @@ tutor.borrar_memoria()                                    # olvida la conversaci
 interfaz(tutor, ejemplos=["¿Cómo sumo fracciones?"])      # página de chat (clase 9)
 ```
 
-El notebook [`ejemplos/ejemplo_curso.ipynb`](ejemplos/ejemplo_curso.ipynb) recorre todas las clases. Cuando el repositorio esté publicado, se abre directo en Colab con [este link](https://colab.research.google.com/github/nifalconi/ninaspro/blob/main/ejemplos/ejemplo_curso.ipynb).
+El notebook [`ejemplos/ejemplo_curso.ipynb`](ejemplos/ejemplo_curso.ipynb) recorre todas las clases. Se abre directo en Colab con [este link](https://colab.research.google.com/github/nifalconi/ninaspro/blob/main/ejemplos/ejemplo_curso.ipynb).
 
 ## Guía por clase
 
@@ -264,5 +264,4 @@ Detalles técnicos que conviene saber antes de tocar el código:
 
 - **Probarlo en un Colab real:** la instalación desde GitHub, la ayuda al pasar el mouse y el error en una línea.
 - **La key:** decidir cómo llega (Secretos de Colab, una casilla, o dentro de la librería).
-- **Publicar el repositorio** en GitHub para que funcione el `pip install git+…`.
 - **Nombre del módulo:** el `ninaspro.py` de la clase 2 (repo `ninas-pro-agentes`) se llama igual. No conviene usar los dos en la misma sesión de Colab.
