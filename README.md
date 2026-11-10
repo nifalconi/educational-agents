@@ -50,7 +50,7 @@ El problema es que, al enseñar, la configuración se come la clase. Cada notebo
 <th>😌 Ahora</th>
 </tr>
 <tr>
-<td>
+<td valign="top">
 
 ```python
 !pip install openai-agents openai gradio
@@ -83,7 +83,7 @@ print(resultado.final_output)
 ```
 
 </td>
-<td>
+<td valign="top">
 
 ```python
 from educational_agents import crear_agente
