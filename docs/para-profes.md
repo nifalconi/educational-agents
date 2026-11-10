@@ -1,6 +1,6 @@
 # Para profes y tutoras
 
-Cómo preparar los notebooks del curso con `ninaspro` y qué hacer cuando algo falla.
+Cómo preparar los notebooks de un curso con `educational_agents` y qué hacer cuando algo falla.
 
 ## La celda de preparación
 
@@ -8,12 +8,12 @@ Es la primera celda de cada notebook. Las alumnas la ejecutan y no la tocan:
 
 ```python
 #@title Preparación (ejecútala primero)
-!pip install -q git+https://github.com/nifalconi/ninaspro
+!pip install -q git+https://github.com/nifalconi/educational-agents
 %env OPENROUTER_API_KEY=sk-or-...
 ```
 
 - **`#@title`** hace que Colab muestre la celda como un formulario con título. Con doble clic sobre el título se oculta o se muestra el código.
-- **Tiene que ejecutarse antes que todo lo demás.** Si no, `from ninaspro import ...` falla, y la ayuda al pasar el mouse no aparece (sale del código ya cargado).
+- **Tiene que ejecutarse antes que todo lo demás.** Si no, `from educational_agents import ...` falla, y la ayuda al pasar el mouse no aparece (sale del código ya cargado).
 - **No hace falta montar Drive ni cambiar de carpeta** para crear un agente. Solo se necesita Drive si las habilidades o los archivos JSON están ahí.
 - Tarda lo que tarda `pip` en instalar `openai-agents` y `gradio` (en Colab, del orden de un minuto).
 
@@ -26,7 +26,21 @@ Es la primera celda de cada notebook. Las alumnas la ejecutan y no la tocan:
 
 ## El modelo
 
-Está fijo en la librería (`anthropic/claude-haiku-5.5` por OpenRouter, que es con el que funciona la key del curso). Si una alumna escribe `model=` o `modelo=`, ve que *"el modelo ya viene listo"*. Para cambiarlo para todo el curso se cambia `MODELO_CURSO` en `src/ninaspro/agentes.py`.
+Por defecto todos los agentes usan **`anthropic/claude-haiku-5.5` por OpenRouter**: es rápido, barato y bueno usando herramientas. Las alumnas no tienen que escribir nada.
+
+Para usar otro, hay dos formas:
+
+```python
+from educational_agents import conectar, crear_agente
+
+conectar(modelo="openai/gpt-4o-mini")                         # para todos los agentes (en la celda de preparación)
+tutor = crear_agente("Ayudar", modelo="openai/gpt-4o-mini")   # solo para este agente
+```
+
+- Los nombres de los modelos están en [openrouter.ai/models](https://openrouter.ai/models).
+- **Otro proveedor** compatible con la API de OpenAI: `conectar(key="...", url="https://api.openai.com/v1", modelo="gpt-4o-mini")`. Solo está probado con OpenRouter.
+- Si la key tiene límites por modelo (en OpenRouter se pueden bloquear modelos), un modelo no permitido da: *"Ese modelo no existe o no está permitido con esta key. Revisa el nombre, o quita modelo= para usar el de siempre."*
+- La caché de instrucciones (`cache_control`) solo se pide a los modelos de Anthropic.
 
 ## Actualizar la librería
 
@@ -34,7 +48,7 @@ Está fijo en la librería (`anthropic/claude-haiku-5.5` por OpenRouter, que es 
 - En una sesión que ya estaba abierta, la versión vieja sigue cargada. Para forzar la nueva:
 
   ```python
-  !pip install -q --force-reinstall --no-deps git+https://github.com/nifalconi/ninaspro
+  !pip install -q --force-reinstall --no-deps git+https://github.com/nifalconi/educational-agents
   ```
 
   y después **Entorno de ejecución → Reiniciar sesión**, y volver a ejecutar la celda de preparación.
@@ -46,16 +60,16 @@ Está fijo en la librería (`anthropic/claude-haiku-5.5` por OpenRouter, que es 
 - Si las habilidades están en Drive: montar Drive y pasar la ruta completa, `carpeta_habilidades="/content/drive/MyDrive/mi-proyecto/SKILLS"`. Ya no hace falta `os.chdir`.
 - La ruta se fija al crear el agente: un `os.chdir` posterior no rompe las herramientas.
 
-## El `ninaspro.py` de la clase 2
+## El `ninaspro.py` de la clase 2 (Niñas Pro)
 
-La clase 2 descarga otro archivo que también se llama `ninaspro.py` (repositorio `ninas-pro-agentes`, con `catalogo_gratis()`, `usar_modelos()` y `usar_plan_b()`). Como el módulo tiene el mismo nombre, **no conviene usar los dos en la misma sesión de Colab**: el archivo descargado en la carpeta del notebook tapa a la librería instalada.
+La clase 2 del curso de Niñas Pro descarga otro archivo, `ninaspro.py` (repositorio `ninas-pro-agentes`, con `catalogo_gratis()`, `usar_modelos()` y `usar_plan_b()`), para comparar modelos gratis. Es otra cosa y no choca con `educational_agents`: se pueden usar los dos en el mismo notebook.
 
 ## Problemas comunes
 
 | Lo que pasa | Qué hacer |
 |---|---|
-| `ModuleNotFoundError: No module named 'ninaspro'` | No se ejecutó la celda de preparación. Ejecutarla y repetir. |
-| "Falta la key del curso" | Falta la línea `%env OPENROUTER_API_KEY=...` o no se ejecutó. |
+| `ModuleNotFoundError: No module named 'educational_agents'` | No se ejecutó la celda de preparación. Ejecutarla y repetir. |
+| "Falta la key" | Falta la línea `%env OPENROUTER_API_KEY=...` o no se ejecutó. |
 | "la key no funciona" | La key está mal copiada, venció o se acabó el saldo. Revisarla en OpenRouter. |
 | "Hay muchas consultas al mismo tiempo" | Límite de OpenRouter con todo el curso conectado. Esperar un minuto; la librería ya reintenta sola 5 veces. |
 | No aparece la ayuda al pasar el mouse | La celda de preparación no se ejecutó en esta sesión. |

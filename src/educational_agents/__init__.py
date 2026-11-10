@@ -1,6 +1,6 @@
-"""ninaspro: agentes de IA en 2 líneas, para el curso "IA Aplicada: Agentes" de Niñas Pro.
+"""educational_agents: agentes de IA en 2 líneas, para aprender y enseñar.
 
-    from ninaspro import crear_agente, interfaz
+    from educational_agents import crear_agente, interfaz
     tutor = crear_agente("Ayudar con tareas de matemáticas", nombre="Tutor")
     tutor.chat("¿me ayudas con fracciones?")
     interfaz(tutor)
@@ -25,6 +25,7 @@ singular o plural. La ayuda muestra el nombre técnico (en MAYÚSCULA abajo).
     output_guardrails     GUARDRAILS_SALIDA          filtro_salida      -
     handoffs              DERIVAR_A                  transferir_a       -
     temperature           TEMPERATURA                creatividad        variedad
+    model                 MODELO                     -                  -
 
   Con el agente
     chat()                CHAT()                     chat()             -
@@ -43,7 +44,10 @@ singular o plural. La ayuda muestra el nombre técnico (en MAYÚSCULA abajo).
     theme                 TEMA                       colores            -
     share                 COMPARTIR                  -                  -
 
-Más ayuda: crear_agente?   interfaz?   herramienta?   tutor.chat?
+Por defecto usa anthropic/claude-haiku-5.5 en OpenRouter. Para cambiarlo:
+conectar(modelo="openai/gpt-4o-mini") o crear_agente(..., modelo="...").
+
+Más ayuda: crear_agente?   interfaz?   herramienta?   conectar?   tutor.chat?
 """
 
 from .agentes import (Agente, ErrorEnTuAgente, abrir_chat, conectar, crear_agente,

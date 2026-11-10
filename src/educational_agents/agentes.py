@@ -1,7 +1,7 @@
-"""Todo el funcionamiento de ninaspro: crear_agente, interfaz, herramienta y los avisos.
+"""Todo el funcionamiento de educational_agents: crear_agente, interfaz, herramienta y avisos.
 
 La tabla de nombres y la guía de uso están en el docstring del paquete
-(help(ninaspro)) y en el README del repositorio.
+(help(educational_agents)) y en el README del repositorio.
 """
 
 import asyncio
@@ -20,10 +20,10 @@ from agents import (Agent, FunctionTool, InputGuardrail, MaxTurnsExceeded, Model
 from agents import function_tool as _function_tool_sdk
 from openai import AsyncOpenAI
 
-MODELO_CURSO = "anthropic/claude-haiku-5.5"   # la key del curso solo funciona con este
-BASE_URL = "https://openrouter.ai/api/v1"
+MODELO_POR_DEFECTO = "anthropic/claude-haiku-5.5"   # rápido, barato y bueno usando herramientas
+URL_POR_DEFECTO = "https://openrouter.ai/api/v1"     # OpenRouter: una sola key para muchos modelos
 
-_estado = {"client": None, "loop": None}
+_estado = {"client": None, "loop": None, "modelo": MODELO_POR_DEFECTO}
 _CARPETA_PAQUETE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -71,6 +71,7 @@ _NOMBRES_AGENTE = {
     "guardrails_salida": ["output_guardrails", "filtro_salida"],
     "derivar_a": ["handoffs", "transferir_a"],
     "temperatura": ["temperature", "creatividad", "variedad"],
+    "modelo": ["model"],
 }
 _NOMBRES_CHAT = {"ver_pasos": ["verbose"]}
 _NOMBRES_INTERFAZ = {
@@ -82,9 +83,8 @@ _NOMBRES_INTERFAZ = {
     "compartir": ["share"],
     "opciones_gradio": [],   # avanzado: se pasa tal cual a demo.launch()
 }
-_MODELO_LISTO = "El modelo ya viene listo: no hace falta ponerlo."
 _ESPECIALES_AGENTE = {
-    "model": _MODELO_LISTO, "modelo": _MODELO_LISTO, "model_settings": _MODELO_LISTO,
+    "model_settings": "Los ajustes del modelo ya vienen listos. Para la temperatura usa temperatura=.",
     "descripcion": "Aquí se llama descripcion_para_agentes= (o especialidad=). "
                    "descripcion= es para el texto de interfaz().",
 }
@@ -159,29 +159,41 @@ def _resolver(funcion, indice, escritos, especiales=None):
 
 # --- Conexión ---------------------------------------------------------------
 
-def conectar(key: str = None):
-    """Conecta el curso con el modelo. Normalmente no necesitas llamarla.
+def conectar(key: str = None, modelo: str = None, url: str = None):
+    """Elige la key, el modelo y el proveedor de todos los agentes. Es opcional.
 
-    Si no la llamas, se conecta sola con la key que dejó la celda oculta.
+    Si no la llamas, se conecta sola: usa la key de la variable de entorno
+    OPENROUTER_API_KEY y el modelo anthropic/claude-haiku-5.5 en OpenRouter.
+
+    Parámetros (todos opcionales):
+        key: la key del proveedor. Si no la pones, se lee de OPENROUTER_API_KEY.
+        modelo: el modelo de los agentes que crees después de llamarla.
+            Los nombres están en openrouter.ai/models. Ej: "openai/gpt-4o-mini"
+        url: otro proveedor compatible con la API de OpenAI, en vez de
+            OpenRouter. Ej: "https://api.openai.com/v1" (con modelo="gpt-4o-mini")
 
     Ejemplo:
-        conectar("sk-or-...")
+        conectar(modelo="openai/gpt-4o-mini")
     """
     __tracebackhide__ = True
     key = key or os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise ErrorEnTuAgente(
-            "Falta la key del curso. Ejecuta primero la celda oculta del comienzo.")
-    client = AsyncOpenAI(base_url=BASE_URL, api_key=key, max_retries=5)
+            "Falta la key. Ejecuta primero la celda de preparación del comienzo.")
+    if modelo is not None:
+        if not isinstance(modelo, str) or not modelo.strip():
+            raise ErrorEnTuAgente("modelo tiene que ser un texto. Ej: modelo=\"openai/gpt-4o-mini\"")
+        _estado["modelo"] = modelo.strip()
+    client = AsyncOpenAI(base_url=url or URL_POR_DEFECTO, api_key=key, max_retries=5)
     set_default_openai_client(client)
     set_tracing_disabled(True)
     _estado["client"] = client
     return client
 
 
-def _modelo():
+def _modelo(nombre):
     client = _estado["client"] or conectar()
-    return OpenAIChatCompletionsModel(model=MODELO_CURSO, openai_client=client)
+    return OpenAIChatCompletionsModel(model=nombre, openai_client=client)
 
 
 # --- asyncio sin que la alumna lo vea ---------------------------------------
@@ -203,6 +215,10 @@ def _mensaje_error(e):
         return str(e)
     if isinstance(e, openai.AuthenticationError):
         return "No pude conectarme con el modelo: la key no funciona. Avísale a tu profe."
+    if isinstance(e, openai.NotFoundError) or (
+            isinstance(e, openai.BadRequestError) and "valid model" in str(e)):
+        return ("Ese modelo no existe o no está permitido con esta key. Revisa el nombre, "
+                "o quita modelo= para usar el de siempre.")
     if isinstance(e, openai.RateLimitError):
         return "Hay muchas consultas al mismo tiempo. Espera un minuto y vuelve a intentar."
     if isinstance(e, openai.APIConnectionError):
@@ -692,6 +708,11 @@ def crear_agente(instrucciones=None, *sobra, **opciones):
         temperatura (también: creatividad, variedad, temperature): de 0 a 1.
             Con 0 responde casi siempre igual; con 1 varía más. Ej: 0.2
 
+    Avanzado (casi nunca hace falta):
+        modelo (también: model): otro modelo solo para este agente. Por defecto
+            es anthropic/claude-haiku-5.5, o el que se eligió con conectar().
+            Ej: modelo="openai/gpt-4o-mini"
+
     Todos valen también con o sin tilde y en singular o plural.
 
     Devuelve:
@@ -778,15 +799,22 @@ def crear_agente(instrucciones=None, *sobra, **opciones):
     if not descripcion:
         descripcion = texto_principal.splitlines()[0][:200]
 
+    modelo = p.get("modelo", _estado["modelo"])
+    if not isinstance(modelo, str) or not modelo.strip():
+        raise ErrorEnTuAgente(f"{nombre_de('modelo')} tiene que ser un texto. "
+                              "Ej: modelo=\"openai/gpt-4o-mini\"")
+    modelo = modelo.strip()
+    ajustes = {"cache_control": {"type": "ephemeral"}} if modelo.startswith("anthropic/") else None
+
     agente = Agente(
         name=nombre,
         handoff_description=descripcion,
         instructions=texto,
-        model=_modelo(),
+        model=_modelo(modelo),
         model_settings=ModelSettings(
             temperature=t,
             max_tokens=2048,
-            extra_body={"cache_control": {"type": "ephemeral"}},
+            extra_body=ajustes,   # caché de Anthropic: abarata repetir las instrucciones
         ),
         tools=tools,
         handoffs=derivar,
@@ -802,8 +830,8 @@ def _firma_para_colab(instrucciones: str, nombre: str = "Mi agente", tono: str =
                       herramientas: list = None, habilidades: list = None,
                       memoria: bool = False, guardrails_entrada=None, guardrails_salida=None,
                       derivar_a: list = None, descripcion_para_agentes: str = None,
-                      temperatura: float = None, carpeta_habilidades: str = "SKILLS"
-                      ) -> Agente: ...
+                      temperatura: float = None, carpeta_habilidades: str = "SKILLS",
+                      modelo: str = None) -> Agente: ...
 
 
 # Lo que muestra Colab al escribir crear_agente( : los nombres principales, en el

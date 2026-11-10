@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b21b6"/>
+      <stop offset="0.55" stop-color="#db2777"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="burbuja" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="url(#fondo)"/>
+
+  <!-- círculos de fondo -->
+  <circle cx="1080" cy="40" r="120" fill="#ffffff" opacity="0.08"/>
+  <circle cx="120" cy="330" r="90" fill="#ffffff" opacity="0.07"/>
+  <circle cx="980" cy="320" r="46" fill="#ffffff" opacity="0.10"/>
+
+  <!-- texto -->
+  <text x="70" y="150" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="70" font-weight="800" fill="#ffffff">educational-agents</text>
+  <text x="72" y="205" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="30" font-weight="500" fill="#ffffff" opacity="0.95">Agentes de IA en 2 líneas, para aprender y enseñar</text>
+
+  <!-- código -->
+  <rect x="70" y="240" width="600" height="64" rx="14" fill="#1e1b4b" opacity="0.55"/>
+  <text x="94" y="281" font-family="Menlo, Consolas, 'Courier New', monospace" font-size="22" xml:space="preserve"><tspan fill="#fde68a">tutor</tspan><tspan fill="#ffffff"> = crear_agente(</tspan><tspan fill="#a7f3d0">"Ayudar con tareas"</tspan><tspan fill="#ffffff">)</tspan></text>
+
+  <!-- burbujas de chat -->
+  <g transform="translate(775 105)" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <rect x="0" y="0" width="335" height="70" rx="20" fill="url(#burbuja)"/>
+    <path d="M 40 70 L 30 92 L 66 70 Z" fill="#ffffff" opacity="0.88"/>
+    <text x="24" y="44" font-size="22" fill="#5b21b6" font-weight="600">¿Me ayudas con 3/4 + 1/2?</text>
+
+    <rect x="40" y="110" width="350" height="70" rx="20" fill="#1e1b4b" opacity="0.6"/>
+    <path d="M 350 180 L 362 202 L 326 180 Z" fill="#1e1b4b" opacity="0.6"/>
+    <text x="64" y="154" font-size="22" fill="#ffffff" font-weight="500">¿Qué número sirve para 4 y 2?</text>
+  </g>
+</svg>

@@ -9,10 +9,10 @@ import gradio as gr
 import pytest
 from agents import GuardrailFunctionOutput, input_guardrail
 
-import ninaspro
-from ninaspro import (ErrorEnTuAgente, abrir_chat, crear_agente, function_tool, herramienta,
+import educational_agents
+from educational_agents import (ErrorEnTuAgente, abrir_chat, crear_agente, function_tool, herramienta,
                       interface, interfaz)
-from ninaspro import agentes as n
+from educational_agents import agentes as n
 
 RAIZ = Path(__file__).resolve().parent.parent
 SKILLS = Path(__file__).resolve().parent / "SKILLS"
@@ -64,7 +64,25 @@ SINONIMOS = {
     "handoffs": ("derivar_a", [experta]), "transferir_a": ("derivar_a", [experta]),
     "temperature": ("temperatura", 0.3), "creatividad": ("temperatura", 0.3),
     "variedad": ("temperatura", 0.3), "Temperatura": ("temperatura", 0.3),
+    "model": ("modelo", "openai/gpt-4o-mini"), "modelo": ("modelo", "openai/gpt-4o-mini"),
 }
+
+
+def test_modelo_por_defecto_y_propio():
+    assert crear_agente("x").model.model == "anthropic/claude-haiku-5.5"
+    propio = crear_agente("x", model="openai/gpt-4o-mini")
+    assert propio.model.model == "openai/gpt-4o-mini"
+    # la caché de Anthropic solo se pide a modelos de Anthropic
+    assert propio.model_settings.extra_body is None
+    assert crear_agente("x").model_settings.extra_body == {"cache_control": {"type": "ephemeral"}}
+
+
+def test_conectar_cambia_el_modelo_de_los_agentes_nuevos():
+    try:
+        educational_agents.conectar(modelo="openai/gpt-4o-mini")
+        assert crear_agente("x").model.model == "openai/gpt-4o-mini"
+    finally:
+        educational_agents.conectar(modelo=n.MODELO_POR_DEFECTO)
 
 
 @pytest.mark.parametrize("escrito", SINONIMOS)
@@ -115,7 +133,8 @@ def test_ficha_dice_que_el_nombre_es_del_agente():
     (lambda: crear_agente("x", recordar="si"), "recordar tiene que ser True o False"),
     (lambda: crear_agente("x", memoria="no"), "memoria tiene que ser True o False"),
     (lambda: crear_agente("x", creatividad=5), "creatividad va de 0 a 1"),
-    (lambda: crear_agente("x", model="gpt"), "ya viene listo"),
+    (lambda: crear_agente("x", model_settings={}), "ya vienen listos"),
+    (lambda: crear_agente("x", modelo=""), "modelo tiene que ser un texto"),
     (lambda: crear_agente("Tutor", "Ayudar"), "Solo las instrucciones van sin nombre"),
     (lambda: crear_agente(), "Faltan las instrucciones"),
     (lambda: crear_agente("x", herramientas=["calcular"]), "entre comillas"),
@@ -226,7 +245,7 @@ def test_la_documentacion_nombra_cada_sinonimo(nombre, funcion):
     """Si se agrega un nombre en el código, tiene que quedar en los tres lugares de ayuda."""
     readme = (RAIZ / "README.md").read_text(encoding="utf-8")
     assert f"`{nombre}`" in readme or f"`{nombre}=" in readme, "falta en el README"
-    assert re.search(rf"\b{nombre}\b", ninaspro.__doc__ or "", re.I), "falta en help(ninaspro)"
+    assert re.search(rf"\b{nombre}\b", educational_agents.__doc__ or "", re.I), "falta en help(educational_agents)"
     assert re.search(rf"\b{nombre}\b", funcion.__doc__ or ""), f"falta en {funcion.__name__}?"
 
 

@@ -1,6 +1,8 @@
 # Guía por clase
 
-Qué se agrega en cada clase del curso **IA Aplicada: Agentes**. Cada clase suma lo que se enseñó ese día; lo anterior sigue igual.
+Un ejemplo de cómo usar `educational_agents` a lo largo de un curso de 10 clases. Es el orden del curso **IA Aplicada: Agentes** de [Niñas Pro](https://ninaspro.cl), donde nació la librería, pero sirve como mapa para cualquier curso o taller.
+
+Cada clase suma lo que se enseñó ese día; lo anterior sigue igual.
 
 Todos los ejemplos suponen que ya se ejecutó la celda de preparación (ver el [README](../README.md#instalación)).
 
@@ -9,7 +11,7 @@ Todos los ejemplos suponen que ya se ejecutó la celda de preparación (ver el [
 ## Clase 2 · Primer agente
 
 ```python
-from ninaspro import crear_agente
+from educational_agents import crear_agente
 
 tutor = crear_agente("Ayudar con tareas de matemáticas", nombre="Mati")
 tutor.chat("¿Cómo te llamas?")
@@ -41,7 +43,7 @@ tutor.ver_instrucciones()
 ## Clase 4 · Herramientas
 
 ```python
-from ninaspro import crear_agente, herramienta
+from educational_agents import crear_agente, herramienta
 
 @herramienta
 def calcular_tiempo(horas_libres: int, materias: int) -> str:
@@ -178,7 +180,7 @@ tutor.chat("Tengo 6 horas y 3 materias", ver_pasos=True)
 ## Clase 9 · Interfaz
 
 ```python
-from ninaspro import interfaz
+from educational_agents import interfaz
 
 interfaz(
     tutor,

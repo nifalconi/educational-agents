@@ -3,12 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ninaspro"
+name = "educational-agents"
 version = "0.1.0"
-description = "Agentes de IA en 2 líneas para el curso IA Aplicada: Agentes de Niñas Pro"
+description = "Agentes de IA en 2 líneas, en español, para aprender y enseñar"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Nicolás Falconi" }]
+keywords = ["educación", "agentes", "ia", "colab", "openai-agents", "español"]
 dependencies = [
     "openai-agents>=0.24",
     "gradio>=6",
