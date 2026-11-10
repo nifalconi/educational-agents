@@ -31,9 +31,38 @@ class ErrorEnTuAgente(Exception):
     """Algo en cómo se creó o se usa el agente. El mensaje dice cómo arreglarlo."""
 
 
+_ARGUMENTO_SIN_NOMBRE = {
+    "crear_agente": "Solo las instrucciones van sin nombre. Lo demás se escribe con su nombre, "
+                    "por ejemplo: crear_agente(\"Ayudar con tareas\", nombre=\"Tutor\")",
+    "interfaz": "Después del agente, lo demás va con su nombre: interfaz(tutor, titulo=\"Mi tutor\")",
+    "chat": "Después del mensaje, ver_pasos va con su nombre: tutor.chat(\"hola\", ver_pasos=True)",
+    "obtener_respuesta": "obtener_respuesta recibe solo el mensaje: "
+                         "tutor.obtener_respuesta(\"hola\")",
+}
+_ARGUMENTO_SIN_NOMBRE.update(abrir_chat=_ARGUMENTO_SIN_NOMBRE["interfaz"],
+                             interface=_ARGUMENTO_SIN_NOMBRE["interfaz"],
+                             responder=_ARGUMENTO_SIN_NOMBRE["obtener_respuesta"],
+                             respond=_ARGUMENTO_SIN_NOMBRE["obtener_respuesta"])
+
+
+def _traducir_type_error(mensaje):
+    """'crear_agente() takes from 0 to 1 positional arguments...' -> el aviso en español.
+
+    Devuelve None si el TypeError no es de una función de esta librería.
+    """
+    encontrado = re.match(r"^(?:Agente\.)?(\w+)\(\) takes .* positional arguments? but", mensaje)
+    return _ARGUMENTO_SIN_NOMBRE.get(encontrado.group(1)) if encontrado else None
+
+
 def _mostrar_error_corto(shell, etype, evalue, tb, tb_offset=None):
-    """En Colab/Jupyter, ErrorEnTuAgente se muestra en una línea, sin el traceback
+    """En Colab/Jupyter, nuestros errores se muestran en una línea, sin el traceback
     de adentro de esta librería (que no ayuda a una alumna)."""
+    if issubclass(etype, TypeError):
+        traducido = _traducir_type_error(str(evalue))
+        if traducido is None:   # un TypeError cualquiera: se muestra como siempre
+            shell.showtraceback((etype, evalue, tb), tb_offset=tb_offset)
+            return None
+        evalue = traducido
     linea = None
     while tb is not None:
         if not tb.tb_frame.f_code.co_filename.startswith(_CARPETA_PAQUETE):
@@ -46,7 +75,7 @@ def _mostrar_error_corto(shell, etype, evalue, tb, tb_offset=None):
 try:
     from IPython import get_ipython
     if get_ipython() is not None:
-        get_ipython().set_custom_exc((ErrorEnTuAgente,), _mostrar_error_corto)
+        get_ipython().set_custom_exc((ErrorEnTuAgente, TypeError), _mostrar_error_corto)
 except ImportError:
     pass
 
@@ -131,6 +160,21 @@ _INDICE_CHAT = _indice(_NOMBRES_CHAT)
 _INDICE_INTERFAZ = _indice(_NOMBRES_INTERFAZ)
 
 
+def _escritos(funcion, valores, otros_nombres):
+    """Lo que escribió la alumna: los parámetros que cambió más los otros nombres.
+
+    `valores` son los locals() de la función; un parámetro con su valor por
+    defecto cuenta como no escrito.
+    """
+    escritos = {}
+    for nombre, defecto in (funcion.__kwdefaults__ or {}).items():
+        valor = valores[nombre]
+        if not (valor is defecto or (type(valor) is type(defecto) and valor == defecto)):
+            escritos[nombre] = valor
+    escritos.update(otros_nombres)
+    return escritos
+
+
 def _resolver(funcion, indice, escritos, especiales=None):
     """Traduce lo que escribió la alumna a los nombres principales.
 
@@ -160,20 +204,20 @@ def _resolver(funcion, indice, escritos, especiales=None):
 # --- Conexión ---------------------------------------------------------------
 
 def conectar(key: str = None, modelo: str = None, url: str = None):
-    """Elige la key, el modelo y el proveedor de todos los agentes. Es opcional.
+    """Elige la key, el modelo o el proveedor de todos los agentes. Es opcional.
 
-    Si no la llamas, se conecta sola: usa la key de la variable de entorno
-    OPENROUTER_API_KEY y el modelo anthropic/claude-haiku-5.5 en OpenRouter.
+    ```python
+    conectar(modelo="openai/gpt-4o-mini")
+    ```
 
-    Parámetros (todos opcionales):
-        key: la key del proveedor. Si no la pones, se lee de OPENROUTER_API_KEY.
-        modelo: el modelo de los agentes que crees después de llamarla.
-            Los nombres están en openrouter.ai/models. Ej: "openai/gpt-4o-mini"
-        url: otro proveedor compatible con la API de OpenAI, en vez de
-            OpenRouter. Ej: "https://api.openai.com/v1" (con modelo="gpt-4o-mini")
+    Si no la llamas, se conecta sola: usa la key de `OPENROUTER_API_KEY` y el
+    modelo Claude Haiku (`anthropic/claude-haiku-5.5`) en OpenRouter.
 
-    Ejemplo:
-        conectar(modelo="openai/gpt-4o-mini")
+    - `key`: la key del proveedor. Si no la pones, se lee de `OPENROUTER_API_KEY`.
+    - `modelo`: el modelo de los agentes que crees después. Los nombres están
+      en openrouter.ai/models. Ej: `"openai/gpt-4o-mini"`
+    - `url`: otro proveedor compatible con la API de OpenAI, en vez de
+      OpenRouter. Ej: `"https://api.openai.com/v1"`
     """
     __tracebackhide__ = True
     key = key or os.environ.get("OPENROUTER_API_KEY")
@@ -300,17 +344,19 @@ def _revisar_habilidades(habilidades, carpeta_habilidades, como="habilidades"):
 def herramienta(funcion):
     """Convierte tu función en una herramienta que el agente puede usar.
 
-    También se puede escribir @function_tool (el nombre del SDK).
+    ```python
+    @herramienta
+    def calcular_tiempo(horas_libres: int, materias: int) -> str:
+        \"\"\"Reparte las horas libres de la semana entre las materias.\"\"\"
+        return f"{horas_libres / materias} horas por materia"
+    ```
 
-    Se escribe arriba de la función, con @. El agente lee el docstring
-    (el texto entre comillas triples) para saber para qué sirve, y los tipos
-    (int, str...) para saber qué datos pasarle.
+    - Va justo arriba del `def`, con `@`.
+    - El agente lee el docstring (el texto entre comillas triples) para saber
+      para qué sirve la herramienta.
+    - Los tipos (`int`, `str`) le dicen qué datos pasarle.
 
-    Ejemplo:
-        @herramienta
-        def calcular_tiempo(horas_libres: int, materias: int) -> str:
-            \"\"\"Reparte las horas libres de la semana entre las materias.\"\"\"
-            return f"{horas_libres / materias} horas por materia"
+    También se puede escribir `@function_tool`, como en el SDK.
     """
     __tracebackhide__ = True
     if isinstance(funcion, FunctionTool):
@@ -401,20 +447,22 @@ def reporte_interaccion(resultado):
 
 
 class Agente(Agent):
-    """Tu agente. Se crea con crear_agente(...), no directamente.
+    """Tu agente. Se crea con `crear_agente(...)`.
 
-    Qué puedes hacer con él (si se llama tutor):
-        tutor.chat("hola")                          conversa y muestra la respuesta
-        respuesta = tutor.obtener_respuesta("hola") te entrega la respuesta para guardarla
-        tutor.borrar_memoria()                      borra la conversación (con memoria=True)
-        tutor.ver_instrucciones()                   muestra el texto que lee el modelo
+    ```python
+    tutor.chat("hola")                           # conversa y muestra la respuesta
+    respuesta = tutor.obtener_respuesta("hola")  # te entrega el texto
+    tutor.borrar_memoria()                       # empieza de cero (con memoria=True)
+    tutor.ver_instrucciones()                    # el texto que lee el modelo
+    ```
 
-    Otros nombres: obtener_respuesta() = responder() = respond();
-    borrar_memoria() = olvidar() = clear_memory();
-    ver_instrucciones() = show_instructions().
+    ### Otros nombres que funcionan igual
+    - `obtener_respuesta()`: `responder()`, `respond()`
+    - `borrar_memoria()`: `olvidar()`, `clear_memory()`
+    - `ver_instrucciones()`: `show_instructions()`
 
-    Por dentro es un Agent del OpenAI Agents SDK, así que también
-    funciona con Runner.run(tutor, "hola").
+    Por dentro es un `Agent` del OpenAI Agents SDK, así que
+    `Runner.run(tutor, "hola")` también funciona.
     """
 
     def _turno(self, mensaje, historial=()):
@@ -435,21 +483,18 @@ class Agente(Agent):
         return texto, resultado.to_input_list(), resultado, avisos
 
     def obtener_respuesta(self, mensaje: str) -> str:
-        """Le escribe al agente y te entrega su respuesta, sin mostrarla.
+        """Le escribe al agente y te entrega la respuesta, sin mostrarla.
 
-        También se llama responder() o respond().
+        ```python
+        respuesta = clasificador.obtener_respuesta("¿Cómo sumo fracciones?")
+        if "INVÁLIDO" in respuesta:
+            print("Está fuera de tema")
+        ```
 
-        Úsalo cuando quieras guardar la respuesta en una variable o revisarla
-        en tu código (por ejemplo, dentro de un guardrail). Para conversar y
-        ver la respuesta en pantalla, usa chat().
+        Sirve para guardar la respuesta en una variable o revisarla en tu
+        código (por ejemplo, dentro de un guardrail). Para conversar, usa `chat()`.
 
-        Ejemplo:
-            respuesta = clasificador.obtener_respuesta("¿Cómo sumo fracciones?")
-            if "INVÁLIDO" in respuesta:
-                print("Está fuera de tema")
-
-        Devuelve:
-            La respuesta del agente, como texto (str).
+        También se llama `responder()` o `respond()`.
         """
         __tracebackhide__ = True
         texto, self._historial, self.ultimo, self._avisos = self._turno(
@@ -459,27 +504,23 @@ class Agente(Agent):
     responder = obtener_respuesta
     respond = obtener_respuesta
 
-    def chat(self, mensaje=None, *sobra, **opciones):
+    def chat(self, mensaje: str = None, *, ver_pasos: bool = False, **otros_nombres):
         """Le escribe un mensaje al agente y muestra su respuesta.
 
-        Ejemplo:
-            tutor.chat("¿Me ayudas con 3/4 + 1/2?")
+        ```python
+        tutor.chat("¿Me ayudas con 3/4 + 1/2?")
+        tutor.chat("Tengo 6 horas y 3 materias", ver_pasos=True)
+        ```
 
-        Parámetros:
-            mensaje: lo que le quieres decir. Ej: "¿Me ayudas con fracciones?"
-            ver_pasos (también: verbose): True para ver también qué herramientas
-                usó, con qué datos, y si un guardrail bloqueó algo.
-                Ej: tutor.chat("Tengo 6 horas y 3 materias", ver_pasos=True)
+        - `mensaje`: lo que le quieres decir, entre comillas.
+        - `ver_pasos`: `True` para ver qué herramientas usó, con qué datos, y si
+          un guardrail bloqueó algo. También se llama `verbose`.
 
-        Devuelve:
-            Nada: la respuesta se muestra debajo de la celda.
-            Para guardarla en una variable, usa obtener_respuesta().
+        La respuesta se muestra debajo de la celda. Para guardarla en una
+        variable, usa `obtener_respuesta()`.
         """
         __tracebackhide__ = True
-        if sobra:
-            raise ErrorEnTuAgente("Después del mensaje, ver_pasos va con su nombre: "
-                                  "tutor.chat(\"hola\", ver_pasos=True)")
-        p, _ = _resolver("chat", _INDICE_CHAT, opciones)
+        p, _ = _resolver("chat", _INDICE_CHAT, _escritos(Agente.chat, locals(), otros_nombres))
         if mensaje is None:
             raise ErrorEnTuAgente("Falta el mensaje: tutor.chat(\"hola\")")
         texto = self.obtener_respuesta(mensaje)
@@ -491,11 +532,11 @@ class Agente(Agent):
     def borrar_memoria(self) -> None:
         """Borra lo que el agente recuerda de la conversación: empieza de cero.
 
-        También se llama olvidar() o clear_memory().
+        Solo cambia algo si el agente tiene `memoria=True`. No toca los archivos
+        JSON de tus herramientas, ni las conversaciones de `interfaz()` (ahí se
+        usa el basurero 🗑️).
 
-        Solo cambia algo si creaste el agente con memoria=True.
-        No toca los archivos JSON que guardan tus herramientas, ni las
-        conversaciones de interfaz() (ahí se usa el basurero 🗑️).
+        También se llama `olvidar()` o `clear_memory()`.
         """
         self._historial = []
         print("✓ Memoria de la conversación borrada")
@@ -504,9 +545,9 @@ class Agente(Agent):
     clear_memory = borrar_memoria
 
     def ver_instrucciones(self) -> None:
-        """Muestra el texto completo que lee el modelo (armado con tu ficha).
+        """Muestra el texto completo que lee el modelo, armado con tu ficha.
 
-        También se llama show_instructions().
+        También se llama `show_instructions()`.
         """
         print(self.instructions)
 
@@ -525,50 +566,46 @@ class Agente(Agent):
         return f"<Agente '{self.name}'. Escríbele con .chat(\"hola\")>"
 
 
-def _firma_chat(self, mensaje: str, ver_pasos: bool = False) -> None: ...
-
-
-Agente.chat.__signature__ = inspect.signature(_firma_chat)
 Agente.__signature__ = inspect.Signature()   # que Agente? no muestre los 16 parámetros del SDK
 
 
 # --- interfaz -----------------------------------------------------------------
 
-def interfaz(agente=None, *sobra, **opciones):
-    """Abre una página de chat para conversar con tu agente (y compartirla).
+def interfaz(agente: "Agente" = None, *, titulo: str = None, descripcion: str = None,
+             ejemplos: list = None, mensaje_inicial: str = None, tema: str = "Soft",
+             compartir: bool = True, **otros_nombres):
+    """Abre una página de chat para conversar con tu agente y compartirla.
 
-    También se llama abrir_chat() o interface().
+    ```python
+    interfaz(tutor, ejemplos=["¿Cómo sumo fracciones?"],
+             mensaje_inicial="¡Hola! ¿En qué tarea estás?")
+    ```
 
-    Ejemplo:
-        interfaz(tutor, ejemplos=["¿Cómo sumo fracciones?"],
-                 mensaje_inicial="¡Hola! ¿En qué tarea estás?")
+    Todo es opcional, menos el agente:
 
-    Parámetros (todos opcionales, menos el agente):
-        agente: el agente que creaste con crear_agente. Ej: tutor
-        titulo (también: title): título del chat. Si no lo pones, usa el
-            nombre del agente.
-        descripcion (también: description): texto corto bajo el título.
-            Ej: "Te ayudo con tus tareas."
-        ejemplos (también: examples): preguntas que aparecen como botones.
-            Ej: ["¿Cómo sumo fracciones?", "Explícame la fotosíntesis"]
-        mensaje_inicial (también: bienvenida, welcome): lo primero que dice
-            el agente. Ej: "¡Hola! ¿En qué te ayudo?"
-        tema (también: colores, theme): estilo de colores.
-            Ej: "Soft", "Glass", "Monochrome", "Ocean"
-        compartir (también: share): True crea un link para abrir el chat desde
-            otro computador o celular. Viene en True.
+    - `titulo`: título del chat. Si no lo pones, usa el nombre del agente.
+    - `descripcion`: texto corto bajo el título. Ej: `"Te ayudo con tus tareas."`
+    - `ejemplos`: preguntas que aparecen como botones. Ej: `["¿Cómo sumo fracciones?"]`
+    - `mensaje_inicial`: lo primero que dice el agente. Ej: `"¡Hola! ¿En qué te ayudo?"`
+    - `tema`: los colores. Ej: `"Soft"`, `"Glass"`, `"Ocean"`, `"Monochrome"`
+    - `compartir`: `True` (viene así) crea un link para abrir el chat desde otro
+      computador o el celular.
 
-    Devuelve:
-        Nada que necesites: el chat aparece debajo de la celda.
-        Cada persona que abre el link tiene su propia conversación.
+    Cada persona que abre el link tiene su propia conversación.
+
+    ### Otros nombres que funcionan igual
+    - `interfaz()`: `abrir_chat()`, `interface()`
+    - `titulo`: `title`
+    - `descripcion`: `description`
+    - `ejemplos`: `examples`
+    - `mensaje_inicial`: `bienvenida`, `welcome`
+    - `tema`: `colores`, `theme`
+    - `compartir`: `share`
     """
     __tracebackhide__ = True
     import gradio as gr
 
-    if sobra:
-        raise ErrorEnTuAgente("Después del agente, lo demás va con su nombre: "
-                              "interfaz(tutor, titulo=\"Mi tutor\")")
-    p, como = _resolver("interfaz", _INDICE_INTERFAZ, opciones)
+    p, como = _resolver("interfaz", _INDICE_INTERFAZ, _escritos(interfaz, locals(), otros_nombres))
     if not isinstance(agente, Agente):
         raise ErrorEnTuAgente("interfaz recibe un agente creado con crear_agente. "
                               "Ejemplo: interfaz(tutor)")
@@ -610,12 +647,6 @@ def interfaz(agente=None, *sobra, **opciones):
                        **(p.get("opciones_gradio") or {}))
 
 
-def _firma_interfaz(agente: "Agente", titulo: str = None, descripcion: str = None,
-                    ejemplos: list = None, mensaje_inicial: str = None, tema: str = "Soft",
-                    compartir: bool = True) -> None: ...
-
-
-interfaz.__signature__ = inspect.signature(_firma_interfaz)
 abrir_chat = interfaz
 interface = interfaz
 
@@ -657,73 +688,72 @@ def _armar_instrucciones(nombre, instrucciones, tono, audiencia, limitaciones):
     return "\n\n".join(partes)
 
 
-def crear_agente(instrucciones=None, *sobra, **opciones):
+def crear_agente(instrucciones: str = None, *, nombre: str = "Mi agente", tono: str = None,
+                 audiencia: str = None, limitaciones: list = None, herramientas: list = None,
+                 habilidades: list = None, memoria: bool = False, guardrails_entrada=None,
+                 guardrails_salida=None, derivar_a: list = None,
+                 descripcion_para_agentes: str = None, temperatura: float = None,
+                 carpeta_habilidades: str = "SKILLS", modelo: str = None, **otros_nombres):
     """Crea un agente nuevo. Solo las instrucciones son obligatorias.
 
-    Ejemplo:
-        tutor = crear_agente("Ayudar con tareas de matemáticas", nombre="Tutor")
-        tutor.chat("¿Cuánto es 3/4 + 1/2?")
+    ```python
+    tutor = crear_agente("Ayudar con tareas de matemáticas", nombre="Tutor")
+    tutor.chat("¿Cuánto es 3/4 + 1/2?")
+    ```
 
-    Las instrucciones van primero y sin nombre. Todo lo demás se escribe con
-    su nombre (nombre="...", tono="..."), y lo vas a ir sumando clase a clase.
-    Cada uno tiene otros nombres que funcionan igual (entre paréntesis).
+    Las instrucciones van primero, sin nombre. Lo demás se escribe con su
+    nombre (`nombre="..."`) y se va sumando clase a clase.
 
-    Lo que lee tu agente (se junta en un solo texto; míralo con ver_instrucciones()):
-        instrucciones (también: instructions, proposito): qué tiene que hacer.
-            Ej: "Ayudar a estudiantes de secundaria con sus tareas."
-        nombre (también: name): cómo se llama. Ej: "Tutor Socrático"
-        tono (también: personalidad, tone): cómo habla.
-            Ej: "Cercano y paciente. Guía con preguntas."
-        audiencia (también: publico_objetivo, audience): con quién habla.
-            Ej: "Estudiantes de 14 a 18 años."
-        limitaciones (también: reglas, rules): lo que NO debe hacer (una frase o
-            una lista). El modelo las lee, pero se las puede saltar: para
-            bloquear siempre, usa guardrails.
-            Ej: ["Solo temas escolares.", "No des la respuesta final."]
+    ### Lo que lee tu agente
+    - `instrucciones`: qué tiene que hacer. Ej: `"Ayudar con tareas"`
+    - `nombre`: cómo se llama. Ej: `"Tutor Socrático"`
+    - `tono`: cómo habla. Ej: `"Cercano y paciente"`
+    - `audiencia`: con quién habla. Ej: `"Estudiantes de 14 a 18 años"`
+    - `limitaciones`: lo que NO debe hacer. Ej: `["Solo temas escolares"]`.
+      El modelo se las puede saltar; para bloquear siempre, usa guardrails.
 
-    Lo que puede hacer:
-        herramientas (también: tools): funciones (o agentes) que puede usar.
-            Ej: [calcular_tiempo]
-        habilidades (también: recetas, skills): carpetas dentro de SKILLS que
-            puede leer. Ej: ["tutor-socratico"]
-        carpeta_habilidades (también: carpeta_recetas, skills_folder): dónde
-            están las habilidades. Casi siempre "SKILLS".
-        derivar_a (también: transferir_a, handoffs): agentes a los que les
-            puede pasar la conversación. Ej: [experta]
-        descripcion_para_agentes (también: especialidad, cuando_usarme,
-            handoff_description): para qué sirve, en una frase. No la lee este
-            agente: la leen los otros agentes para saber cuándo llamarlo.
-            Si no la pones, se usa el comienzo de las instrucciones.
+    Todo eso se junta en un solo texto: míralo con `tutor.ver_instrucciones()`.
 
-    Controles (código, no texto: el modelo no los lee):
-        memoria (también: recordar, memoria_de_sesion, memory): True para que
-            recuerde la conversación mientras el notebook está abierto (no la
-            guarda en un archivo). Ej: memoria=True
-        guardrails_entrada (también: filtro_entrada, input_guardrails):
-            funciones que revisan el mensaje ANTES de responder. Reciben el
-            texto y devuelven (True, "") o (False, "aviso").
-            Ej: guardrails_entrada=validar_entrada
-        guardrails_salida (también: filtro_salida, output_guardrails): lo
-            mismo, pero revisan la respuesta del agente.
-        temperatura (también: creatividad, variedad, temperature): de 0 a 1.
-            Con 0 responde casi siempre igual; con 1 varía más. Ej: 0.2
+    ### Lo que puede hacer
+    - `herramientas`: funciones (o agentes) que puede usar. Ej: `[calcular_tiempo]`
+    - `habilidades`: carpetas dentro de `SKILLS`. Ej: `["tutor-socratico"]`
+    - `carpeta_habilidades`: dónde están las habilidades. Por defecto `"SKILLS"`
+    - `derivar_a`: agentes a los que les puede pasar la conversación. Ej: `[experta]`
+    - `descripcion_para_agentes`: para qué sirve, en una frase. No la lee este
+      agente: la leen los otros, para saber cuándo llamarlo.
 
-    Avanzado (casi nunca hace falta):
-        modelo (también: model): otro modelo solo para este agente. Por defecto
-            es anthropic/claude-haiku-5.5, o el que se eligió con conectar().
-            Ej: modelo="openai/gpt-4o-mini"
+    ### Controles (el modelo no los lee)
+    - `memoria`: `True` para que recuerde la conversación mientras el notebook
+      está abierto (no la guarda en un archivo).
+    - `guardrails_entrada`: funciones que revisan el mensaje antes de responder.
+      Devuelven `(True, "")` o `(False, "aviso")`. Ej: `validar_entrada`
+    - `guardrails_salida`: lo mismo, pero revisan la respuesta.
+    - `temperatura`: de 0 a 1. Con 0 responde casi siempre igual. Ej: `0.2`
+    - `modelo`: otro modelo para este agente. Por defecto, Claude Haiku
+      (`anthropic/claude-haiku-5.5`) o el que se eligió con `conectar()`.
 
-    Todos valen también con o sin tilde y en singular o plural.
+    ### Otros nombres que funcionan igual
+    - `instrucciones`: `instructions`, `proposito`
+    - `nombre`: `name`
+    - `tono`: `personalidad`, `tone`
+    - `audiencia`: `publico_objetivo`, `audience`
+    - `limitaciones`: `reglas`, `rules`
+    - `herramientas`: `tools`
+    - `habilidades`: `recetas`, `skills`
+    - `carpeta_habilidades`: `carpeta_recetas`, `skills_folder`
+    - `derivar_a`: `transferir_a`, `handoffs`
+    - `descripcion_para_agentes`: `especialidad`, `cuando_usarme`, `handoff_description`
+    - `memoria`: `recordar`, `memoria_de_sesion`, `memory`
+    - `guardrails_entrada`: `filtro_entrada`, `input_guardrails`
+    - `guardrails_salida`: `filtro_salida`, `output_guardrails`
+    - `temperatura`: `creatividad`, `variedad`, `temperature`
+    - `modelo`: `model`
 
-    Devuelve:
-        El agente. Guárdalo en una variable: tutor = crear_agente(...)
+    Valen con o sin tilde y en singular o plural.
     """
     __tracebackhide__ = True
-    if sobra:
-        raise ErrorEnTuAgente(
-            "Solo las instrucciones van sin nombre. Lo demás se escribe con su nombre, "
-            "por ejemplo: crear_agente(\"Ayudar con tareas\", nombre=\"Tutor\")")
-    p, como = _resolver("crear_agente", _INDICE_AGENTE, opciones, _ESPECIALES_AGENTE)
+    p, como = _resolver("crear_agente", _INDICE_AGENTE,
+                        _escritos(crear_agente, locals(), otros_nombres), _ESPECIALES_AGENTE)
     if instrucciones is not None:
         if "instrucciones" in p:
             raise ErrorEnTuAgente(
@@ -823,17 +853,3 @@ def crear_agente(instrucciones=None, *sobra, **opciones):
     agente._entrada = _como_lista(p.get("guardrails_entrada"))
     agente._salida = _como_lista(p.get("guardrails_salida"))
     return agente
-
-
-def _firma_para_colab(instrucciones: str, nombre: str = "Mi agente", tono: str = None,
-                      audiencia: str = None, limitaciones: list = None,
-                      herramientas: list = None, habilidades: list = None,
-                      memoria: bool = False, guardrails_entrada=None, guardrails_salida=None,
-                      derivar_a: list = None, descripcion_para_agentes: str = None,
-                      temperatura: float = None, carpeta_habilidades: str = "SKILLS",
-                      modelo: str = None) -> Agente: ...
-
-
-# Lo que muestra Colab al escribir crear_agente( : los nombres principales, en el
-# orden en que se enseñan (los sinónimos están en el docstring).
-crear_agente.__signature__ = inspect.signature(_firma_para_colab)

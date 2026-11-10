@@ -135,7 +135,6 @@ def test_ficha_dice_que_el_nombre_es_del_agente():
     (lambda: crear_agente("x", creatividad=5), "creatividad va de 0 a 1"),
     (lambda: crear_agente("x", model_settings={}), "ya vienen listos"),
     (lambda: crear_agente("x", modelo=""), "modelo tiene que ser un texto"),
-    (lambda: crear_agente("Tutor", "Ayudar"), "Solo las instrucciones van sin nombre"),
     (lambda: crear_agente(), "Faltan las instrucciones"),
     (lambda: crear_agente("x", herramientas=["calcular"]), "entre comillas"),
     (lambda: crear_agente("x", herramientas=[3]), "sin ()"),   # lo que queda tras calcular(1, 2)
@@ -183,9 +182,60 @@ def test_metodos_con_varios_nombres():
     assert p == {"ver_pasos": True}
 
 
-def test_chat_con_true_sin_nombre():
+@pytest.mark.parametrize("llamar, esperado", [
+    (lambda a: crear_agente("Tutor", "Ayudar"), "Solo las instrucciones van sin nombre"),
+    (lambda a: a.chat("hola", True), "ver_pasos va con su nombre"),
+    (lambda a: interfaz(a, "Mi tutor"), "Después del agente"),
+    (lambda a: a.obtener_respuesta("hola", True), "recibe solo el mensaje"),
+])
+def test_argumento_sin_nombre_se_traduce(llamar, esperado):
+    """Python lanza un TypeError en inglés; en Colab se muestra en español."""
     a = crear_agente("x")
-    assert "ver_pasos va con su nombre" in error_de(lambda: a.chat("hola", True))
+    with pytest.raises(TypeError) as e:
+        llamar(a)
+    assert esperado in n._traducir_type_error(str(e.value))
+
+
+def test_otros_type_error_no_se_tocan():
+    assert n._traducir_type_error("len() takes exactly one argument (2 given)") is None
+    assert n._traducir_type_error("f() takes from 0 to 1 positional arguments but 2 were given") is None
+
+
+def test_en_colab_los_otros_type_error_se_muestran_como_siempre(capsys):
+    """IPython ignora lo que devuelve el handler: hay que llamar a showtraceback."""
+    llamadas = []
+
+    class ShellFalso:
+        def showtraceback(self, exc_tuple, tb_offset=None):
+            llamadas.append(exc_tuple[1])
+
+    error = TypeError("len() takes exactly one argument (2 given)")
+    n._mostrar_error_corto(ShellFalso(), TypeError, error, None)
+    assert llamadas == [error]
+    n._mostrar_error_corto(ShellFalso(), TypeError,
+                           TypeError("crear_agente() takes from 0 to 1 positional arguments "
+                                     "but 2 were given"), None)
+    assert "❌ Solo las instrucciones van sin nombre" in capsys.readouterr().out
+    assert len(llamadas) == 1
+
+
+@pytest.mark.parametrize("funcion, tabla, sin", [
+    (n.crear_agente, n._NOMBRES_AGENTE, {"instrucciones"}),
+    (n.interfaz, n._NOMBRES_INTERFAZ, {"opciones_gradio"}),
+    (n.Agente.chat, n._NOMBRES_CHAT, set()),
+])
+def test_la_firma_tiene_los_nombres_principales(funcion, tabla, sin):
+    """Colab muestra la línea del def tal cual: ahí van los nombres principales."""
+    assert set(funcion.__kwdefaults__) == set(tabla) - sin
+
+
+@pytest.mark.parametrize("funcion", [n.crear_agente, n.interfaz, n.herramienta, n.conectar,
+                                     n.Agente, n.Agente.chat, n.Agente.obtener_respuesta,
+                                     n.Agente.borrar_memoria, n.Agente.ver_instrucciones])
+def test_docstrings_sin_negritas(funcion):
+    """La ayuda de Colab no muestra negritas ni cursivas: saldrían los asteriscos."""
+    assert "**" not in funcion.__doc__
+    assert "```python" in funcion.__doc__ or len(funcion.__doc__) < 600
 
 
 def test_tab_y_repr_muestran_solo_lo_del_curso():
@@ -222,7 +272,7 @@ def test_interfaz_con_sinonimos(gradio_falso):
 
 
 @pytest.mark.parametrize("llamar, esperado", [
-    (lambda a: interfaz(a, tema="Soft", theme="Glass"), "Escribiste tema= y theme="),
+    (lambda a: interfaz(a, tema="Ocean", theme="Glass"), "Escribiste tema= y theme="),
     (lambda a: interfaz(a, tema="rosado"), "No existe el tema 'rosado'"),
     (lambda a: interfaz("tutor"), "interfaz recibe un agente"),
 ])

@@ -361,7 +361,7 @@ La ayuda sale del código ya cargado: la celda de preparación tiene que haberse
 
 - ⌨️ **Al escribir `crear_agente(`** o **pasar el mouse** sobre el nombre: la explicación de cada parámetro, con un ejemplo.
 - ❓ **`crear_agente?`** abre la ayuda en un panel; **`help(educational_agents)`** muestra la tabla de nombres.
-- ⇥ **`tutor.` + Tab** muestra solo lo útil: `chat`, `obtener_respuesta`, `borrar_memoria`, `ver_instrucciones`, `nombre`.
+- ⇥ **`tutor.` + Tab** muestra los métodos (`chat`, `obtener_respuesta`, `borrar_memoria`, `ver_instrucciones`…). En Colab también aparecen algunos nombres del SDK, como `as_tool` o `clone`.
 - 👀 Si una celda termina en `tutor`, se ve `<Agente 'Tutor'. Escríbele con .chat("hola")>`.
 
 ## 🏫 Para profes y tutoras
@@ -389,8 +389,8 @@ tests/                               pruebas sin conexión (pytest)
 
 - **asyncio:** Colab ya tiene un event loop corriendo, así que `Runner.run_sync` falla. Todo corre en un loop propio en un hilo aparte, y siempre el mismo, porque el cliente de OpenAI guarda conexiones atadas a su loop.
 - **Gradio:** la memoria va por `request.session_hash`, una por persona que abre el link. En Gradio 6, el tema va en `launch()`.
-- **Errores cortos:** `ErrorEnTuAgente` se registra con `get_ipython().set_custom_exc(...)` al importar. `__tracebackhide__` solo no acorta los tracebacks.
-- **Ayuda:** `crear_agente.__signature__` es una firma limpia en el orden en que se enseña; `Agente.__dir__` limita lo que muestra Tab.
+- **Errores cortos:** `ErrorEnTuAgente` y `TypeError` se registran con `get_ipython().set_custom_exc(...)` al importar. Un `TypeError` por pasar un argumento sin nombre (`crear_agente("Tutor", "Ayudar")`) se traduce al español; cualquier otro se muestra con `shell.showtraceback()`, porque IPython ignora lo que devuelve el handler. `__tracebackhide__` solo no acorta los tracebacks.
+- **Ayuda en Colab:** el recuadro muestra la línea del `def` tal como está escrita (no usa `__signature__`), así que los nombres principales van como parámetros reales, en el orden en que se enseñan, y los otros nombres entran por `**otros_nombres`. El docstring se lee como markdown, pero solo en parte: funcionan los bloques ` ```python `, los títulos `###`, las listas y el `código`; las negritas y cursivas salen con los asteriscos. `tests/test_nombres.py` revisa que no haya `**` en la ayuda.
 - **Caché:** `cache_control` solo se pide a modelos de Anthropic; otros proveedores podrían rechazarlo.
 
 </details>
